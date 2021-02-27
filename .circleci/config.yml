@@ -1,0 +1,41 @@
+version: 2.1
+
+orbs:
+  aws-ecr: circleci/aws-ecr@6.12.0
+
+jobs:
+  golang_test:
+    docker:
+      - image: circleci/golang:1.14
+    steps:
+      - checkout
+
+      - run:
+          name: "running golang tests"
+          command: "go test ./..."
+
+  golang_release:
+    machine: true
+    steps:
+      - checkout
+
+      - aws-ecr/build-and-push-image:
+          account-url: 'AWS_ECR_ACCOUNT_URL'
+          aws-access-key-id: 'AWS_ACCESS_KEY_ID'
+          aws-secret-access-key: 'AWS_SECRET_ACCESS_KEY'
+          region: 'AWS_REGION'
+          repo: "golang-dist"
+          tag: 'latest,$CIRCLE_SHA1'
+
+workflows:
+  version: 2
+  delivery:
+    jobs:
+      - golang_test
+      - golang_release:
+          requires:
+            - golang_test
+          filters:
+            branches:
+              only:
+                - master
